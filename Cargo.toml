@@ -1,0 +1,8 @@
+[package]
+name = "h"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lliw = "0.2.0"
+synoptic = "2.2.9"
