@@ -23,6 +23,10 @@ fn main() {
     
     // Render the output
     for (line_number, line) in code.iter().enumerate() {
+        if line_number + 1 == code.len() {
+            break;
+        }
+        print!("{}\t", line_number + 1);
         // Line returns tokens for the corresponding line from file
         for token in h.line(line_number, &line) {
             // Tokens can either require highlighting or not require highlighting
