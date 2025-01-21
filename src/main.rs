@@ -1,4 +1,5 @@
 use lliw::Fg;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -8,19 +9,30 @@ use synoptic::{from_extension, TokOpt};
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let (code, h) = get_history_commands();
+    let run_env_vars: HashMap<&str, String> = HashMap::from([
+        (
+            "HOME",
+            env::var("HOME").expect("Environment variable: \"HOME\" not found."),
+        ),
+        (
+            "SHELL",
+            env::var("SHELL")
+                .expect("Environment variable: \"SHELL\" not found.")
+                .split("/")
+                .last()
+                .expect("String was unable to be split.")
+                .to_string(),
+        ),
+    ]);
+
+    let (code, h) = get_history_commands(&run_env_vars);
 
     if args.len() > 1 {
         let line_num: usize = args[1].parse().expect("Not a valid number");
         let cmd = &code[line_num - 1];
-        
-        let shell_path = env::var("SHELL").expect("Environment variable: \"SHELL\" not found.");
-        let shell_name = shell_path
-            .split("/")
-            .last()
-            .expect("String was unable to be split.");
-        print!("{}", &cmd);
-        Command::new(shell_name)
+
+        println!("{}", &cmd);
+        Command::new(&run_env_vars["SHELL"])
             .args(["-c", &cmd])
             .spawn()
             .expect(&format!("Command failed to start: \"{}\"", &cmd));
@@ -51,10 +63,10 @@ fn render_history(code: Vec<String>, h: synoptic::Highlighter) {
     }
 }
 
-fn get_history_commands() -> (Vec<String>, synoptic::Highlighter) {
-    let home_dir: String = env::var("HOME").expect("Environment variable: \"HOME\" not found.");
+fn get_history_commands(env_vars: &HashMap<&str, String>) -> (Vec<String>, synoptic::Highlighter) {
+    // let home_dir: String = env::var("HOME").expect("Environment variable: \"HOME\" not found.");
 
-    let path = PathBuf::from(format!("{home_dir}/.bash_history"));
+    let path = PathBuf::from(format!("{}/.bash_history", env_vars["HOME"]));
 
     let code = fs::read_to_string(path).expect("Should have been able to read the file");
 
