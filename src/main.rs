@@ -13,12 +13,13 @@ fn main() {
     if args.len() > 1 {
         let line_num: usize = args[1].parse().expect("Not a valid number");
         let cmd = &code[line_num - 1];
+        
         let shell_path = env::var("SHELL").expect("Environment variable: \"SHELL\" not found.");
         let shell_name = shell_path
             .split("/")
             .last()
             .expect("String was unable to be split.");
-        
+        print!("{}", &cmd);
         Command::new(shell_name)
             .args(["-c", &cmd])
             .spawn()
