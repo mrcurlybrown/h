@@ -1,26 +1,28 @@
 use std::fs;
-// use std::io::prelude::*;
-use synoptic::{from_extension, TokOpt};
+use std::env;
+use std::path::PathBuf;
 use lliw::Fg;
+use synoptic::{from_extension, TokOpt};
 
 fn main() {
-    let path = "/home/tejasdeshpande/.bash_history";
+    let home_dir: String = env::var("HOME").expect("Environment variable: \"HOME\" not found.");
 
-    let code = fs::read_to_string(path)
-        .expect("Should have been able to read the file");
-    
+    let path = PathBuf::from(format!("{home_dir}/.bash_history"));
+
+    let code = fs::read_to_string(path).expect("Should have been able to read the file");
+
     let code = code
         .split('\n')
         .map(|line| line.to_string())
         .collect::<Vec<String>>();
-    
+
     let mut h = from_extension("bash", 4).expect("Highlighter should have been created.");
 
     h.keyword("keyword", r"\b(git|sudo|apt)\b");
-    
+
     // The run method takes a vector of strings (for each line)
     h.run(&code);
-    
+
     // Render the output
     for (line_number, line) in code.iter().enumerate() {
         if line_number + 1 == code.len() {
