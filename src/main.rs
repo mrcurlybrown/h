@@ -1,29 +1,48 @@
-use std::fs;
-use std::env;
-use std::path::PathBuf;
 use lliw::Fg;
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::PathBuf;
+use std::process::Command;
 use synoptic::{from_extension, TokOpt};
 
 fn main() {
-    let home_dir: String = env::var("HOME").expect("Environment variable: \"HOME\" not found.");
+    let args: Vec<String> = env::args().collect();
 
-    let path = PathBuf::from(format!("{home_dir}/.bash_history"));
+    let run_env_vars: HashMap<&str, String> = HashMap::from([
+        (
+            "HOME",
+            env::var("HOME").expect("Environment variable: \"HOME\" not found."),
+        ),
+        (
+            "SHELL",
+            env::var("SHELL")
+                .expect("Environment variable: \"SHELL\" not found.")
+                .split("/")
+                .last()
+                .expect("String was unable to be split.")
+                .to_string(),
+        ),
+    ]);
 
-    let code = fs::read_to_string(path).expect("Should have been able to read the file");
+    let (code, h) = get_history_commands(&run_env_vars);
 
-    let code = code
-        .split('\n')
-        .map(|line| line.to_string())
-        .collect::<Vec<String>>();
+    if args.len() > 1 {
+        let line_num: usize = args[1].parse().expect("Not a valid number");
+        let cmd = &code[line_num - 1];
 
-    let mut h = from_extension("bash", 4).expect("Highlighter should have been created.");
+        println!("{}", &cmd);
+        Command::new(&run_env_vars["SHELL"])
+            .args(["-c", &cmd])
+            .spawn()
+            .expect(&format!("Command failed to start: \"{}\"", &cmd));
+    } else {
+        // Render the output
+        render_history(code, h);
+    }
+}
 
-    h.keyword("keyword", r"\b(git|sudo|apt)\b");
-
-    // The run method takes a vector of strings (for each line)
-    h.run(&code);
-
-    // Render the output
+fn render_history(code: Vec<String>, h: synoptic::Highlighter) {
     for (line_number, line) in code.iter().enumerate() {
         if line_number + 1 == code.len() {
             break;
@@ -42,6 +61,27 @@ fn main() {
         // Insert a newline at the end of every line
         println!();
     }
+}
+
+fn get_history_commands(env_vars: &HashMap<&str, String>) -> (Vec<String>, synoptic::Highlighter) {
+    // let home_dir: String = env::var("HOME").expect("Environment variable: \"HOME\" not found.");
+
+    let path = PathBuf::from(format!("{}/.bash_history", env_vars["HOME"]));
+
+    let code = fs::read_to_string(path).expect("Should have been able to read the file");
+
+    let code = code
+        .split('\n')
+        .map(|line| line.to_string())
+        .collect::<Vec<String>>();
+
+    let mut h = from_extension("bash", 4).expect("Highlighter should have been created.");
+
+    h.keyword("keyword", r"\b(git|sudo|apt)\b");
+
+    // The run method takes a vector of strings (for each line)
+    h.run(&code);
+    (code, h)
 }
 
 fn colour(name: &str) -> Fg {
